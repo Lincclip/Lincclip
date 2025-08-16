@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Image Reference Importer</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+        
+        .header p {
+            margin: 5px 0 0 0;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .input-section {
+            margin-bottom: 20px;
+        }
+        
+        .input-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .input-section textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn-primary {
+            background: #18a0fb;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0d8ce0;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .instructions {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #6c757d;
+        }
+        
+        .instructions h3 {
+            margin: 0 0 8px 0;
+            font-size: 12px;
+            color: #495057;
+        }
+        
+        .instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 4px;
+        }
+        
+        .method-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .method-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        
+        .method-tab.active {
+            background: #18a0fb;
+            color: white;
+        }
+        
+        .method-tab:hover:not(.active) {
+            background: #e9ecef;
+        }
+        
+        .method-content {
+            display: none;
+        }
+        
+        .method-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Image Reference Importer</h1>
+            <p>Import image data copied from Chrome extension to Figma</p>
+        </div>
+        
+        <div class="method-tabs">
+            <button class="method-tab active" data-method="manual">Manual Paste</button>
+            <button class="method-tab" data-method="auto">Auto Sync</button>
+        </div>
+        
+        <!-- Manual paste method -->
+        <div class="method-content active" id="manual-method">
+            <div class="input-section">
+                <label for="imageData">Image Data (JSON):</label>
+                <textarea id="imageData" placeholder="Paste JSON data copied from Chrome extension here..."></textarea>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" id="importBtn">Import Image</button>
+                <button class="btn btn-secondary" id="clearBtn">Clear</button>
+                <button class="btn btn-warning" id="reimportBtn">Reimport Last Data</button>
+            </div>
+        </div>
+        
+        <!-- Auto sync method -->
+        <div class="method-content" id="auto-method">
+            <div class="instructions">
+                <h3>Auto Sync Usage:</h3>
+                <ol>
+                    <li>Right-click on image in Chrome</li>
+                    <li>Select "Copy for Figma"</li>
+                    <li>Click the button below to fetch automatically</li>
+                </ol>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-success" id="fetchBtn">Fetch from Chrome Extension</button>
+                <button class="btn btn-warning" id="reimportBtn2">Reimport Last Data</button>
+            </div>
+        </div>
+        
+        <div id="status" class="status info" style="display: none;"></div>
+        
+        <div class="instructions">
+            <h3>Usage:</h3>
+            <ol>
+                <li><strong>Manual Paste:</strong> Paste JSON copied from Chrome into text area</li>
+                <li><strong>Auto Sync:</strong> Direct communication with Chrome extension (experimental)</li>
+                <li>Last imported data can be reused</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script src="ui.js"></script>
+</body>
+</html>

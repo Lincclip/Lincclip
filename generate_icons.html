@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>아이콘 생성기</title>
+</head>
+<body>
+    <h1>아이콘 생성기</h1>
+    <p>아이콘을 생성하려면 아래 버튼을 클릭하세요:</p>
+    
+    <button onclick="generateIcons()">아이콘 생성</button>
+    
+    <div id="output"></div>
+    
+    <script>
+        function generateIcons() {
+            const sizes = [16, 48, 128];
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+            
+            sizes.forEach(size => {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                
+                // SVG를 이미지로 로드
+                const img = new Image();
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, size, size);
+                    
+                    // PNG로 다운로드
+                    const link = document.createElement('a');
+                    link.download = `icon${size}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    
+                    // 미리보기 표시
+                    const preview = document.createElement('div');
+                    preview.style.display = 'inline-block';
+                    preview.style.margin = '10px';
+                    preview.innerHTML = `
+                        <p>icon${size}.png</p>
+                        <img src="${link.href}" style="border: 1px solid #ccc;">
+                    `;
+                    output.appendChild(preview);
+                };
+                
+                // SVG 데이터 로드
+                const svgData = `<svg width="${size}" height="${size}" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <circle cx="64" cy="64" r="60" fill="url(#grad1)" stroke="#1e40af" stroke-width="2"/>
+                    
+                    <rect x="32" y="28" width="64" height="48" rx="4" fill="white" opacity="0.9"/>
+                    
+                    <rect x="36" y="32" width="20" height="16" rx="2" fill="#e5e7eb"/>
+                    <rect x="58" y="32" width="20" height="16" rx="2" fill="#d1d5db"/>
+                    <rect x="36" y="50" width="20" height="16" rx="2" fill="#9ca3af"/>
+                    <rect x="58" y="50" width="20" height="16" rx="2" fill="#6b7280"/>
+                    
+                    <rect x="80" y="80" width="24" height="32" rx="2" fill="white" opacity="0.9"/>
+                    <rect x="84" y="84" width="16" height="24" rx="1" fill="#3b82f6"/>
+                    
+                    <path d="M 70 96 L 78 96 L 74 92 Z" fill="white"/>
+                    <path d="M 70 96 L 78 96 L 74 100 Z" fill="white"/>
+                </svg>`;
+                
+                const svgBlob = new Blob([svgData], {type: 'image/svg+xml'});
+                const url = URL.createObjectURL(svgBlob);
+                img.src = url;
+            });
+        }
+    </script>
+</body>
+</html>

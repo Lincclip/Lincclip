@@ -1,0 +1,12 @@
+{
+  "name": "Lincclip",
+  "id": "1538432397657205217",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["https://lincclip.com/"]
+  }
+}

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Reference Copy Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        
+        .test-section h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        
+        .test-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        
+        .instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        .note strong {
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Reference Copy Test Page</h1>
+    
+    <div class="instructions">
+        <h3>Test Instructions:</h3>
+        <ol>
+            <li>Right-click on the images below</li>
+            <li>Select "Copy Image + Reference" or "Copy for Figma" from context menu</li>
+            <li>Check the copied content in clipboard</li>
+            <li>Test in Figma plugin (optional)</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Image 1: Cat</h2>
+        <img src="https://placekitten.com/400/300" alt="Cute cat" class="test-image" title="Cat image">
+        <p>Right-click on this image to test.</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Image 2: Dog</h2>
+        <img src="https://placedog.net/400/300" alt="Cute dog" class="test-image" title="Dog image">
+        <p>Right-click on this image to test.</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Image 3: Random Image</h2>
+        <img src="https://picsum.photos/400/300" alt="Random image" class="test-image" title="Random image">
+        <p>Right-click on this image to test.</p>
+    </div>
+    
+    <div class="note">
+        <strong>Note:</strong> This page is for testing the extension. Images are provided by external services, so some images may not load.
+    </div>
+    
+    <div class="instructions">
+        <h3>Expected Results:</h3>
+        <ol>
+            <li><strong>General Copy:</strong> Image URL, page URL, and image description copied as text</li>
+            <li><strong>Figma Copy:</strong> JSON format data copied for use in Figma plugins</li>
+            <li><strong>Notifications:</strong> Success/failure notifications displayed in top-right corner</li>
+        </ol>
+    </div>
+</body>
+</html>
