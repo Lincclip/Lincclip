@@ -55,148 +55,240 @@ function handleImageImport(imageData) {
     // Show loading message
     figma.ui.postMessage({ type: 'info', message: 'Loading image from URL...' });
     
-    // Create image from URL
-    console.log('Creating image from URL...');
-    figma.createImageFromUrl(imageData.imageUrl).then(function(image) {
-      console.log('✅ Image created successfully:', image);
-      console.log('Image dimensions:', image.width, 'x', image.height);
-      
-      // Create image frame
-      var frame = figma.createFrame();
-      frame.name = 'Image Reference - ' + (imageData.altText || 'Image');
-      
-      // Set image size based on imageInfo or use image dimensions
-      var imageInfo = imageData.imageInfo || {};
-      var width = imageInfo.naturalWidth || imageInfo.displayWidth || image.width || 300;
-      var height = imageInfo.naturalHeight || imageInfo.displayHeight || image.height || 200;
-      
-      // Ensure minimum size
-      width = Math.max(width, 100);
-      height = Math.max(height, 100);
-      
-      console.log('Setting frame size to:', width, 'x', height);
-      frame.resize(width, height);
-      
-      // Set image fill
-      frame.fills = [{
-        type: 'IMAGE',
-        imageHash: image.hash,
-        scaleMode: 'FILL'
-      }];
-      
-      console.log('✅ Image frame created successfully');
-      
-      // Create a container frame for image and reference info
-      var container = figma.createFrame();
-      container.name = 'Image Reference Container';
-      container.layoutMode = 'HORIZONTAL';
-      container.itemSpacing = 20;
-      container.paddingLeft = 0;
-      container.paddingRight = 0;
-      container.paddingTop = 0;
-      container.paddingBottom = 0;
-      
-      // Add image frame to container
-      container.appendChild(frame);
-      
-      // Create reference information section
-      var referenceFrame = figma.createFrame();
-      referenceFrame.name = 'Reference Information';
-      referenceFrame.layoutMode = 'VERTICAL';
-      referenceFrame.itemSpacing = 8;
-      referenceFrame.paddingLeft = 16;
-      referenceFrame.paddingRight = 16;
-      referenceFrame.paddingTop = 16;
-      referenceFrame.paddingBottom = 16;
-      referenceFrame.resize(300, 200);
-      referenceFrame.fills = [{ type: 'SOLID', color: { r: 0.95, g: 0.95, b: 0.95 } }];
-      referenceFrame.cornerRadius = 8;
-      
-      // Add title
-      var title = figma.createText();
-      title.characters = '📋 Image Reference';
-      title.fontSize = 16;
-      title.fontWeight = 600;
-      referenceFrame.appendChild(title);
-      
-      // Add reference details
-      var details = figma.createText();
-      var detailsText = '🖼️ Image URL:\n' + imageData.imageUrl + '\n\n' +
-                       '🌐 Page URL:\n' + (imageData.pageUrl || 'N/A') + '\n\n' +
-                       '📝 Description:\n' + (imageData.altText || 'No description') + '\n\n' +
-                       '📏 Size: ' + width + ' x ' + height + 'px';
-      
-      if (imageInfo.naturalWidth && imageInfo.naturalHeight) {
-        detailsText += '\n🖥️ Original: ' + imageInfo.naturalWidth + ' x ' + imageInfo.naturalHeight + 'px';
-      }
-      
-      details.characters = detailsText;
-      details.fontSize = 11;
-      details.lineHeight = { value: 16, unit: 'PIXELS' };
-      referenceFrame.appendChild(details);
-      
-      // Add timestamp if available
-      if (imageData.timestamp) {
-        var timestamp = figma.createText();
-        var date = new Date(imageData.timestamp);
-        timestamp.characters = '🕒 Copied: ' + date.toLocaleString();
-        timestamp.fontSize = 10;
-        timestamp.fills = [{ type: 'SOLID', color: { r: 0.5, g: 0.5, b: 0.5 } }];
-        referenceFrame.appendChild(timestamp);
-      }
-      
-      // Add source indicator
-      if (imageData.metadata && imageData.metadata.originalSource) {
-        var sourceIndicator = figma.createText();
-        sourceIndicator.characters = '✅ ' + imageData.metadata.originalSource;
-        sourceIndicator.fontSize = 10;
-        sourceIndicator.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.6, b: 0.2 } }];
-        referenceFrame.appendChild(sourceIndicator);
-      }
-      
-      // Add reference frame to container
-      container.appendChild(referenceFrame);
-      
-      console.log('✅ Reference frame created successfully');
-      
-      // Load fonts for text elements
-      figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
-        title.fontName = { family: "Inter", style: "Regular" };
-        details.fontName = { family: "Inter", style: "Regular" };
-        timestamp.fontName = { family: "Inter", style: "Regular" };
-        sourceIndicator.fontName = { family: "Inter", style: "Regular" };
-        console.log('✅ Fonts loaded successfully');
-      }).catch(function(fontError) {
-        console.log('⚠️ Font loading failed, using default font:', fontError);
-      });
-      
-      // Position container
-      container.x = figma.viewport.center.x - container.width / 2;
-      container.y = figma.viewport.center.y - container.height / 2;
-      
-      // Select the container
-      figma.currentPage.selection = [container];
-      figma.viewport.scrollAndZoomIntoView([container]);
-      
-      console.log('✅ Container positioned and selected successfully');
-      
-      // Send success message to UI
-      figma.ui.postMessage({ 
-        type: 'success', 
-        message: 'Image reference imported successfully!' 
-      });
-      
-      console.log('✅ Import process completed successfully');
-      
-    }).catch(function(error) {
-      console.error('❌ Image creation failed:', error);
-      handleImportError(error);
-    });
+    // Try different methods to create image
+    createImageWithFallback(imageData);
     
   } catch (error) {
     console.error('❌ Import process failed:', error);
     handleImportError(error);
   }
+}
+
+// Create image with fallback methods
+function createImageWithFallback(imageData) {
+  console.log('=== TRYING IMAGE CREATION METHODS ===');
+  
+  // Method 1: Try figma.createImageFromUrl
+  if (typeof figma.createImageFromUrl === 'function') {
+    console.log('✅ Trying figma.createImageFromUrl...');
+    figma.createImageFromUrl(imageData.imageUrl).then(function(image) {
+      console.log('✅ Image created successfully with createImageFromUrl:', image);
+      processImage(image, imageData);
+    }).catch(function(error) {
+      console.error('❌ createImageFromUrl failed:', error);
+      // Try alternative method
+      createImageAlternative(imageData);
+    });
+  } else {
+    console.log('❌ figma.createImageFromUrl not available, trying alternative...');
+    createImageAlternative(imageData);
+  }
+}
+
+// Alternative image creation method
+function createImageAlternative(imageData) {
+  console.log('=== TRYING ALTERNATIVE IMAGE CREATION ===');
+  
+  try {
+    // Create a simple frame with image URL as reference
+    var frame = figma.createFrame();
+    frame.name = 'Image Reference - ' + (imageData.altText || 'Image');
+    
+    // Set image size based on imageInfo
+    var imageInfo = imageData.imageInfo || {};
+    var width = imageInfo.naturalWidth || imageInfo.displayWidth || 300;
+    var height = imageInfo.naturalHeight || imageInfo.displayHeight || 200;
+    
+    // Ensure minimum size
+    width = Math.max(width, 100);
+    height = Math.max(height, 100);
+    
+    console.log('Setting frame size to:', width, 'x', height);
+    frame.resize(width, height);
+    
+    // Create a placeholder rectangle with the image URL as a note
+    var placeholder = figma.createRectangle();
+    placeholder.name = 'Image Placeholder';
+    placeholder.resize(width, height);
+    placeholder.fills = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
+    placeholder.cornerRadius = 4;
+    
+    // Add the placeholder to the frame
+    frame.appendChild(placeholder);
+    
+    // Create reference information
+    createReferenceInfo(frame, imageData, width, height);
+    
+    // Position and select
+    frame.x = figma.viewport.center.x - frame.width / 2;
+    frame.y = figma.viewport.center.y - frame.height / 2;
+    
+    figma.currentPage.selection = [frame];
+    figma.viewport.scrollAndZoomIntoView([frame]);
+    
+    console.log('✅ Alternative image creation completed');
+    
+    // Send success message
+    figma.ui.postMessage({ 
+      type: 'success', 
+      message: 'Image reference created (placeholder mode). Image URL: ' + imageData.imageUrl 
+    });
+    
+  } catch (error) {
+    console.error('❌ Alternative image creation failed:', error);
+    handleImportError(error);
+  }
+}
+
+// Process successfully created image
+function processImage(image, imageData) {
+  console.log('=== PROCESSING IMAGE ===');
+  console.log('Image dimensions:', image.width, 'x', image.height);
+  
+  // Create image frame
+  var frame = figma.createFrame();
+  frame.name = 'Image Reference - ' + (imageData.altText || 'Image');
+  
+  // Set image size based on imageInfo or use image dimensions
+  var imageInfo = imageData.imageInfo || {};
+  var width = imageInfo.naturalWidth || imageInfo.displayWidth || image.width || 300;
+  var height = imageInfo.naturalHeight || imageInfo.displayHeight || image.height || 200;
+  
+  // Ensure minimum size
+  width = Math.max(width, 100);
+  height = Math.max(height, 100);
+  
+  console.log('Setting frame size to:', width, 'x', height);
+  frame.resize(width, height);
+  
+  // Set image fill
+  frame.fills = [{
+    type: 'IMAGE',
+    imageHash: image.hash,
+    scaleMode: 'FILL'
+  }];
+  
+  console.log('✅ Image frame created successfully');
+  
+  // Create reference information
+  createReferenceInfo(frame, imageData, width, height);
+  
+  // Position and select
+  frame.x = figma.viewport.center.x - frame.width / 2;
+  frame.y = figma.viewport.center.y - frame.height / 2;
+  
+  figma.currentPage.selection = [frame];
+  figma.viewport.scrollAndZoomIntoView([frame]);
+  
+  console.log('✅ Image processing completed successfully');
+  
+  // Send success message to UI
+  figma.ui.postMessage({ 
+    type: 'success', 
+    message: 'Image reference imported successfully!' 
+  });
+}
+
+// Create reference information
+function createReferenceInfo(frame, imageData, width, height) {
+  console.log('=== CREATING REFERENCE INFO ===');
+  
+  // Create a container frame for image and reference info
+  var container = figma.createFrame();
+  container.name = 'Image Reference Container';
+  container.layoutMode = 'HORIZONTAL';
+  container.itemSpacing = 20;
+  container.paddingLeft = 0;
+  container.paddingRight = 0;
+  container.paddingTop = 0;
+  container.paddingBottom = 0;
+  
+  // Add image frame to container
+  container.appendChild(frame);
+  
+  // Create reference information section
+  var referenceFrame = figma.createFrame();
+  referenceFrame.name = 'Reference Information';
+  referenceFrame.layoutMode = 'VERTICAL';
+  referenceFrame.itemSpacing = 8;
+  referenceFrame.paddingLeft = 16;
+  referenceFrame.paddingRight = 16;
+  referenceFrame.paddingTop = 16;
+  referenceFrame.paddingBottom = 16;
+  referenceFrame.resize(300, 200);
+  referenceFrame.fills = [{ type: 'SOLID', color: { r: 0.95, g: 0.95, b: 0.95 } }];
+  referenceFrame.cornerRadius = 8;
+  
+  // Add title
+  var title = figma.createText();
+  title.characters = '📋 Image Reference';
+  title.fontSize = 16;
+  title.fontWeight = 600;
+  referenceFrame.appendChild(title);
+  
+  // Add reference details
+  var details = figma.createText();
+  var detailsText = '🖼️ Image URL:\n' + imageData.imageUrl + '\n\n' +
+                   '🌐 Page URL:\n' + (imageData.pageUrl || 'N/A') + '\n\n' +
+                   '📝 Description:\n' + (imageData.altText || 'No description') + '\n\n' +
+                   '📏 Size: ' + width + ' x ' + height + 'px';
+  
+  var imageInfo = imageData.imageInfo || {};
+  if (imageInfo.naturalWidth && imageInfo.naturalHeight) {
+    detailsText += '\n🖥️ Original: ' + imageInfo.naturalWidth + ' x ' + imageInfo.naturalHeight + 'px';
+  }
+  
+  details.characters = detailsText;
+  details.fontSize = 11;
+  details.lineHeight = { value: 16, unit: 'PIXELS' };
+  referenceFrame.appendChild(details);
+  
+  // Add timestamp if available
+  var timestamp = null;
+  if (imageData.timestamp) {
+    timestamp = figma.createText();
+    var date = new Date(imageData.timestamp);
+    timestamp.characters = '🕒 Copied: ' + date.toLocaleString();
+    timestamp.fontSize = 10;
+    timestamp.fills = [{ type: 'SOLID', color: { r: 0.5, g: 0.5, b: 0.5 } }];
+    referenceFrame.appendChild(timestamp);
+  }
+  
+  // Add source indicator
+  var sourceIndicator = null;
+  if (imageData.metadata && imageData.metadata.originalSource) {
+    sourceIndicator = figma.createText();
+    sourceIndicator.characters = '✅ ' + imageData.metadata.originalSource;
+    sourceIndicator.fontSize = 10;
+    sourceIndicator.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.6, b: 0.2 } }];
+    referenceFrame.appendChild(sourceIndicator);
+  }
+  
+  // Add reference frame to container
+  container.appendChild(referenceFrame);
+  
+  console.log('✅ Reference frame created successfully');
+  
+  // Load fonts for text elements
+  figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
+    title.fontName = { family: "Inter", style: "Regular" };
+    details.fontName = { family: "Inter", style: "Regular" };
+    if (timestamp) timestamp.fontName = { family: "Inter", style: "Regular" };
+    if (sourceIndicator) sourceIndicator.fontName = { family: "Inter", style: "Regular" };
+    console.log('✅ Fonts loaded successfully');
+  }).catch(function(fontError) {
+    console.log('⚠️ Font loading failed, using default font:', fontError);
+  });
+  
+  // Position container
+  container.x = figma.viewport.center.x - container.width / 2;
+  container.y = figma.viewport.center.y - container.height / 2;
+  
+  // Select the container
+  figma.currentPage.selection = [container];
+  figma.viewport.scrollAndZoomIntoView([container]);
+  
+  console.log('✅ Container positioned and selected successfully');
 }
 
 // Handle import errors
@@ -218,6 +310,8 @@ function handleImportError(error) {
     errorMessage = 'Access denied. The image may be protected.';
   } else if (error.message.indexOf('500') !== -1) {
     errorMessage = 'Server error. Please try again later.';
+  } else if (error.message.indexOf('not a function') !== -1) {
+    errorMessage = 'Figma API not available. Please update Figma or try a different approach.';
   } else {
     errorMessage = 'Image import failed: ' + error.message;
   }
@@ -229,6 +323,13 @@ function handleImportError(error) {
 // Handle fetch from extension
 function handleFetchFromExtension() {
   console.log('=== FETCHING FROM EXTENSION ===');
+  
+  // Check if fetch is available
+  if (typeof fetch !== 'function') {
+    console.error('❌ Fetch API not available');
+    figma.ui.postMessage({ type: 'error', message: 'Network API not available in this Figma version.' });
+    return;
+  }
   
   fetch('http://localhost:3000/get-image-data', {
     method: 'GET',
