@@ -35,6 +35,54 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Function to send message to Figma
+    function sendMessageToFigma(message) {
+        console.log('Sending message to Figma:', message);
+        
+        // Try multiple methods to send message
+        try {
+            // Method 1: parent.postMessage
+            if (parent && parent.postMessage) {
+                parent.postMessage({
+                    pluginMessage: message
+                }, '*');
+                console.log('Message sent via parent.postMessage');
+                return true;
+            }
+        } catch (e) {
+            console.error('parent.postMessage failed:', e);
+        }
+        
+        try {
+            // Method 2: window.parent.postMessage
+            if (window.parent && window.parent.postMessage) {
+                window.parent.postMessage({
+                    pluginMessage: message
+                }, '*');
+                console.log('Message sent via window.parent.postMessage');
+                return true;
+            }
+        } catch (e) {
+            console.error('window.parent.postMessage failed:', e);
+        }
+        
+        try {
+            // Method 3: top.postMessage
+            if (top && top.postMessage) {
+                top.postMessage({
+                    pluginMessage: message
+                }, '*');
+                console.log('Message sent via top.postMessage');
+                return true;
+            }
+        } catch (e) {
+            console.error('top.postMessage failed:', e);
+        }
+        
+        console.error('All message sending methods failed');
+        return false;
+    }
+    
     // Image import button click event
     importBtn.addEventListener('click', function() {
         console.log('Import button clicked');
@@ -70,14 +118,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Send data to Figma
             console.log('Sending data to Figma:', imageData);
-            parent.postMessage({
-                pluginMessage: {
-                    type: 'import-image-reference',
-                    data: imageData
-                }
-            }, '*');
+            var messageSent = sendMessageToFigma({
+                type: 'import-image-reference',
+                data: imageData
+            });
             
-            showStatus('Importing image...', 'info');
+            if (messageSent) {
+                showStatus('Importing image...', 'info');
+            } else {
+                showStatus('Failed to send message to Figma. Please try again.', 'error');
+            }
             
         } catch (error) {
             console.error('JSON parsing error:', error);
@@ -95,33 +145,42 @@ document.addEventListener('DOMContentLoaded', function() {
     // Reimport last data buttons
     reimportBtn.addEventListener('click', function() {
         console.log('Reimport button clicked');
-        parent.postMessage({
-            pluginMessage: {
-                type: 'reimport-last'
-            }
-        }, '*');
-        showStatus('Reimporting last data...', 'info');
+        var messageSent = sendMessageToFigma({
+            type: 'reimport-last'
+        });
+        
+        if (messageSent) {
+            showStatus('Reimporting last data...', 'info');
+        } else {
+            showStatus('Failed to send message to Figma. Please try again.', 'error');
+        }
     });
     
     reimportBtn2.addEventListener('click', function() {
         console.log('Reimport button 2 clicked');
-        parent.postMessage({
-            pluginMessage: {
-                type: 'reimport-last'
-            }
-        }, '*');
-        showStatus('Reimporting last data...', 'info');
+        var messageSent = sendMessageToFigma({
+            type: 'reimport-last'
+        });
+        
+        if (messageSent) {
+            showStatus('Reimporting last data...', 'info');
+        } else {
+            showStatus('Failed to send message to Figma. Please try again.', 'error');
+        }
     });
     
     // Auto fetch from Chrome extension
     fetchBtn.addEventListener('click', function() {
         console.log('Fetch button clicked');
-        parent.postMessage({
-            pluginMessage: {
-                type: 'fetch-from-extension'
-            }
-        }, '*');
-        showStatus('Fetching data from Chrome extension...', 'info');
+        var messageSent = sendMessageToFigma({
+            type: 'fetch-from-extension'
+        });
+        
+        if (messageSent) {
+            showStatus('Fetching data from Chrome extension...', 'info');
+        } else {
+            showStatus('Failed to send message to Figma. Please try again.', 'error');
+        }
     });
     
     // Show status message function
@@ -166,6 +225,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 showStatus(message.message, 'info');
                 // Hide initial message after 2 seconds
                 setTimeout(hideStatus, 2000);
+            } else if (message.type === 'info') {
+                showStatus(message.message, 'info');
             }
         }
     };
@@ -239,4 +300,13 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('- Use Ctrl/Cmd + Enter to import');
     console.log('- Use Ctrl/Cmd + K to clear');
     console.log('- Use Ctrl/Cmd + R to reimport');
+    
+    // Test message sending on load
+    setTimeout(function() {
+        console.log('Testing message sending...');
+        sendMessageToFigma({
+            type: 'init',
+            message: 'UI loaded successfully'
+        });
+    }, 1000);
 });

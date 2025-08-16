@@ -6,31 +6,43 @@ var lastImageData = null;
 
 // Receive messages from UI
 figma.ui.onmessage = function(msg) {
-  console.log('Received message from UI:', msg);
+  console.log('=== FIGMA PLUGIN: Received message from UI ===');
+  console.log('Message:', msg);
+  console.log('Message type:', msg.type);
   
   if (msg.type === 'import-image-reference') {
+    console.log('Handling import-image-reference message');
     handleImageImport(msg.data);
   }
   
   // Fetch data directly from Chrome extension (network communication)
   if (msg.type === 'fetch-from-extension') {
+    console.log('Handling fetch-from-extension message');
     handleFetchFromExtension();
   }
   
   // Reuse last imported data
   if (msg.type === 'reimport-last') {
+    console.log('Handling reimport-last message');
     handleReimportLast();
   }
   
   if (msg.type === 'close') {
+    console.log('Handling close message');
     figma.closePlugin();
+  }
+  
+  if (msg.type === 'init') {
+    console.log('Handling init message:', msg.message);
+    figma.ui.postMessage({ type: 'success', message: 'Plugin initialized successfully!' });
   }
 };
 
 // Handle image import
 function handleImageImport(imageData) {
   try {
-    console.log('Importing image data:', imageData);
+    console.log('=== STARTING IMAGE IMPORT ===');
+    console.log('Image data:', imageData);
     lastImageData = imageData; // Save last data
     
     // Data validation
@@ -38,12 +50,16 @@ function handleImageImport(imageData) {
       throw new Error('Image URL is missing.');
     }
     
+    console.log('Image URL:', imageData.imageUrl);
+    
     // Show loading message
     figma.ui.postMessage({ type: 'info', message: 'Loading image from URL...' });
     
     // Create image from URL
+    console.log('Creating image from URL...');
     figma.createImageFromUrl(imageData.imageUrl).then(function(image) {
-      console.log('Image created successfully:', image);
+      console.log('✅ Image created successfully:', image);
+      console.log('Image dimensions:', image.width, 'x', image.height);
       
       // Create image frame
       var frame = figma.createFrame();
@@ -58,6 +74,7 @@ function handleImageImport(imageData) {
       width = Math.max(width, 100);
       height = Math.max(height, 100);
       
+      console.log('Setting frame size to:', width, 'x', height);
       frame.resize(width, height);
       
       // Set image fill
@@ -66,6 +83,8 @@ function handleImageImport(imageData) {
         imageHash: image.hash,
         scaleMode: 'FILL'
       }];
+      
+      console.log('✅ Image frame created successfully');
       
       // Create a container frame for image and reference info
       var container = figma.createFrame();
@@ -138,14 +157,17 @@ function handleImageImport(imageData) {
       // Add reference frame to container
       container.appendChild(referenceFrame);
       
+      console.log('✅ Reference frame created successfully');
+      
       // Load fonts for text elements
       figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
         title.fontName = { family: "Inter", style: "Regular" };
         details.fontName = { family: "Inter", style: "Regular" };
         timestamp.fontName = { family: "Inter", style: "Regular" };
         sourceIndicator.fontName = { family: "Inter", style: "Regular" };
+        console.log('✅ Fonts loaded successfully');
       }).catch(function(fontError) {
-        console.log('Font loading failed, using default font:', fontError);
+        console.log('⚠️ Font loading failed, using default font:', fontError);
       });
       
       // Position container
@@ -156,26 +178,32 @@ function handleImageImport(imageData) {
       figma.currentPage.selection = [container];
       figma.viewport.scrollAndZoomIntoView([container]);
       
+      console.log('✅ Container positioned and selected successfully');
+      
       // Send success message to UI
       figma.ui.postMessage({ 
         type: 'success', 
         message: 'Image reference imported successfully!' 
       });
       
+      console.log('✅ Import process completed successfully');
+      
     }).catch(function(error) {
-      console.error('Image creation failed:', error);
+      console.error('❌ Image creation failed:', error);
       handleImportError(error);
     });
     
   } catch (error) {
-    console.error('Import process failed:', error);
+    console.error('❌ Import process failed:', error);
     handleImportError(error);
   }
 }
 
 // Handle import errors
 function handleImportError(error) {
-  console.error('Image import failed:', error);
+  console.error('=== HANDLING IMPORT ERROR ===');
+  console.error('Error:', error);
+  console.error('Error message:', error.message);
   
   // Provide more detailed error messages
   var errorMessage = 'Image import failed.';
@@ -194,12 +222,13 @@ function handleImportError(error) {
     errorMessage = 'Image import failed: ' + error.message;
   }
   
+  console.error('Sending error message to UI:', errorMessage);
   figma.ui.postMessage({ type: 'error', message: errorMessage });
 }
 
 // Handle fetch from extension
 function handleFetchFromExtension() {
-  console.log('Fetching data from Chrome extension...');
+  console.log('=== FETCHING FROM EXTENSION ===');
   
   fetch('http://localhost:3000/get-image-data', {
     method: 'GET',
@@ -228,7 +257,9 @@ function handleFetchFromExtension() {
 
 // Handle reimport last data
 function handleReimportLast() {
-  console.log('Reimporting last data:', lastImageData);
+  console.log('=== REIMPORTING LAST DATA ===');
+  console.log('Last image data:', lastImageData);
+  
   if (lastImageData) {
     handleImageImport(lastImageData);
   } else {
@@ -237,4 +268,5 @@ function handleReimportLast() {
 }
 
 // Initial message when plugin starts
+console.log('=== FIGMA PLUGIN STARTED ===');
 figma.ui.postMessage({ type: 'init', message: 'Image Reference Importer is ready.' });
