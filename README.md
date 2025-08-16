@@ -1,100 +1,124 @@
-# Image Reference Copy Chrome Extension
+# 🖼️ Image Reference Copy - Chrome Extension
 
-A Chrome extension that allows you to copy images with their reference information by right-clicking on images. Integrates with Figma plugins for design workflow.
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-brightgreen.svg)](https://chrome.google.com/webstore/)
+[![Figma Plugin](https://img.shields.io/badge/Figma-Plugin-orange.svg)](https://www.figma.com/community/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Key Features
+A powerful Chrome extension that allows you to copy images with their reference links and seamlessly integrate with Figma plugins. Perfect for designers and developers who need to maintain image references in their design workflows.
 
-- **Image + Reference Copy**: Copy image URL and page URL together
-- **Figma Data Copy**: Copy in JSON format for use in Figma plugins
-- **Image Information Extraction**: Collect detailed information like size, description, style
-- **User-Friendly Notifications**: Visual feedback for copy success/failure
-- **Auto Sync**: Network communication between Chrome extension and Figma plugin (optional)
+## ✨ Features
 
-## Installation
+- **Right-click Context Menu**: Copy image references with a simple right-click
+- **Dual Copy Modes**: 
+  - 📋 **Copy Image + Reference**: Simple text format with URLs
+  - 🎨 **Copy for Figma**: JSON format for Figma plugin integration
+- **Figma Integration**: Direct import into Figma with detailed image metadata
+- **Auto-sync Server**: Optional local server for automatic data transfer
+- **Beautiful Notifications**: User-friendly success/error notifications
+- **Cross-platform**: Works on Windows, macOS, and Linux
 
-### 1. Chrome Extension Installation
+## 🚀 Quick Start
 
-1. Go to `chrome://extensions/` in Chrome browser
-2. Enable "Developer mode" in top right
-3. Click "Load unpacked"
-4. Select this project folder
+### Chrome Extension Installation
 
-### 2. Figma Plugin Installation (Optional)
+1. **Download the Extension**:
+   ```bash
+   git clone https://github.com/[your-organization]/image-reference-copy-extension.git
+   cd image-reference-copy-extension
+   ```
 
-1. Open plugin menu in Figma
-2. Go to "Development" → "Import plugin from manifest..."
-3. Select `figma-plugin-example` folder
+2. **Load in Chrome**:
+   - Open Chrome and go to `chrome://extensions/`
+   - Enable "Developer mode" (top right toggle)
+   - Click "Load unpacked" and select the extension folder
+   - The extension icon should appear in your toolbar
 
-### 3. Auto Sync Server Installation (Optional)
+3. **Usage**:
+   - Right-click on any image on any webpage
+   - Select "Copy Image + Reference" or "Copy for Figma"
+   - Check your clipboard for the copied data
 
-To use auto sync functionality, run the local server:
+### Figma Plugin Installation
 
-```bash
-# Install dependencies
-npm install
+1. **Install the Plugin**:
+   - Open Figma
+   - Go to Plugins → Browse plugins in Community
+   - Search for "Image Reference Importer" (or install manually)
+   - Install the plugin
 
-# Start server
-npm start
+2. **Usage**:
+   - Run the plugin in Figma
+   - Paste the JSON data copied from Chrome extension
+   - Click "Import Image" to create image frames with references
 
-# Or run in development mode (auto restart)
-npm run dev
-```
-
-Server runs at `http://localhost:3000`.
-
-## Usage
-
-### Basic Usage (Manual)
-
-1. Right-click on any image on a webpage
-2. Select from context menu:
-   - **"Copy Image + Reference"**: Copy in text format
-   - **"Copy for Figma"**: Copy in JSON format (for Figma plugins)
-3. Paste copied data in Figma plugin
-
-### Auto Sync Usage
-
-1. Start local server (`npm start`)
-2. Right-click on image in Chrome → "Copy for Figma"
-3. Select "Auto Sync" tab in Figma plugin
-4. Click "Fetch from Chrome Extension" button
-5. Image and reference information automatically created in Figma
-
-## File Structure
+## 📁 Project Structure
 
 ```
-chome_ex/
-├── manifest.json              # Extension configuration
-├── background.js              # Background script (context menu handling)
-├── content_script.js          # Content script (webpage execution)
-├── popup.html                # Popup interface
-├── popup.js                  # Popup script
-├── icon16.png                # Extension icon (16x16)
-├── icon48.png                # Extension icon (48x48)
-├── icon128.png               # Extension icon (128x128)
-├── icon.svg                  # SVG icon source
-├── generate_icons.html       # Icon generation tool
+image-reference-copy-extension/
+├── manifest.json              # Chrome extension configuration
+├── background.js              # Background service worker
+├── content_script.js          # Content script for webpage interaction
+├── popup.html                 # Extension popup interface
+├── popup.js                   # Popup functionality
+├── icons/                     # Extension icons
+├── figma-plugin-example/      # Figma plugin files
+│   ├── manifest.json          # Figma plugin configuration
+│   ├── code.js               # Main plugin logic
+│   ├── ui.html               # Plugin UI
+│   └── ui.js                 # UI functionality
+├── server.js                 # Optional local server
 ├── test.html                 # Test page
-├── server.js                 # Auto sync server
-├── package.json              # Server dependency management
-├── README.md                 # Project documentation
-└── figma-plugin-example/     # Figma plugin example
-    ├── manifest.json         # Plugin configuration
-    ├── code.js               # Plugin main code
-    ├── ui.html               # Plugin UI
-    └── ui.js                 # Plugin UI script
+├── debug.html                # Debug page
+└── README.md                 # This file
 ```
 
-## Data Format
+## 🔧 Development
 
-### General Copy Format
+### Prerequisites
+
+- Google Chrome browser
+- Node.js (for local server)
+- Figma account (for plugin testing)
+
+### Local Development
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/[your-organization]/image-reference-copy-extension.git
+   cd image-reference-copy-extension
+   ```
+
+2. **Install dependencies** (for local server):
+   ```bash
+   npm install
+   ```
+
+3. **Start local server** (optional):
+   ```bash
+   npm start
+   ```
+
+4. **Load extension in Chrome**:
+   - Go to `chrome://extensions/`
+   - Enable Developer mode
+   - Click "Load unpacked" and select the project folder
+
+### Testing
+
+- Use `test.html` or `debug.html` for testing the extension
+- Check browser console for debug messages
+- Test Figma plugin integration with the provided example
+
+## 📊 Data Format
+
+### Copy Image + Reference Format
 ```
 Image URL: https://example.com/image.jpg
 Page URL: https://example.com/page
 Image Description: Example image
 ```
 
-### Figma JSON Format
+### Copy for Figma Format (JSON)
 ```json
 {
   "type": "image_reference",
@@ -108,125 +132,67 @@ Image Description: Example image
     "naturalWidth": 800,
     "naturalHeight": 600,
     "displayWidth": 400,
-    "displayHeight": 300,
-    "className": "example-image",
-    "id": "main-image",
-    "title": "Example image",
-    "style": {
-      "width": "400px",
-      "height": "300px",
-      "objectFit": "cover",
-      "borderRadius": "8px"
-    }
+    "displayHeight": 300
   },
-  "timestamp": "2024-01-01T12:00:00.000Z",
-  "source": "chrome_extension",
-  "metadata": {
-    "extension": "Image Reference Copy",
-    "version": "1.0"
-  }
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "source": "chrome_extension"
 }
 ```
 
-## API Endpoints (Auto Sync Server)
+## 🔌 API Endpoints (Local Server)
 
-### POST /store-image-data
-Store image data from Chrome extension
+If using the optional local server:
 
-**Request:**
-```json
-{
-  "imageData": {
-    "type": "image_reference",
-    "imageUrl": "https://example.com/image.jpg",
-    ...
-  }
-}
-```
+- `POST /store-image-data` - Store image data from Chrome extension
+- `GET /get-image-data` - Retrieve stored image data for Figma plugin
+- `DELETE /clear-image-data` - Clear stored data
+- `GET /health` - Server health check
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Image data stored successfully.",
-  "timestamp": "2024-01-01T12:00:00.000Z"
-}
-```
-
-### GET /get-image-data
-Get stored image data for Figma plugin
-
-**Response:**
-```json
-{
-  "success": true,
-  "imageData": {
-    "type": "image_reference",
-    "imageUrl": "https://example.com/image.jpg",
-    ...
-  },
-  "timestamp": "2024-01-01T12:00:00.000Z"
-}
-```
-
-### DELETE /clear-image-data
-Clear stored image data
-
-### GET /health
-Server health check
-
-## Permissions
+## 🛠️ Configuration
 
 ### Chrome Extension Permissions
-- `contextMenus`: Add right-click menu to images
-- `clipboardWrite`: Copy data to clipboard
-- `activeTab`: Execute scripts in active tab
-- `scripting`: Execute content scripts
-- `notifications`: Show copy completion notifications
-- `tabs`: Access tab information (for popup)
-- `management`: Access extension information (for popup)
 
-### Figma Plugin Permissions
-- `networkAccess`: Load images from external URLs
-- `allowedDomains`: ["*"] Allow loading images from all domains
+The extension requires the following permissions:
+- `contextMenus` - For right-click context menu
+- `clipboardWrite` - For copying to clipboard
+- `activeTab` - For accessing current tab
+- `scripting` - For executing scripts in tabs
+- `notifications` - For showing notifications
+- `tabs` - For tab management
+- `management` - For extension management
 
-## Development Info
+### Figma Plugin Configuration
 
-- **Manifest Version**: 3
-- **Chrome Version**: 88+ (Manifest V3 support)
-- **Figma API**: 1.0.0
-- **Node.js**: 14+ (for server)
+The Figma plugin includes:
+- `networkAccess` - For fetching images and server communication
+- `documentAccess` - For creating and modifying Figma elements
 
-## Keyboard Shortcuts
+## 🤝 Contributing
 
-### Figma Plugin
-- **Ctrl/Cmd + Enter**: Execute image import
-- **Ctrl/Cmd + K**: Clear text area
-- **Ctrl/Cmd + R**: Reimport last data
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Troubleshooting
+## 📝 License
 
-### Extension Not Working
-1. Check if developer mode is enabled
-2. Reload the extension
-3. Clear browser cache
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### Figma Plugin Integration Issues
-1. Verify JSON data format is correct
-2. Check if image URL is accessible
-3. Reinstall Figma plugin
-4. Verify Network Access permission is set
+## 🙏 Acknowledgments
 
-### Auto Sync Server Issues
-1. Check if server is running (`npm start`)
-2. Verify port 3000 is available
-3. Check firewall settings
-4. Check for CORS errors in browser developer tools
+- Chrome Extensions API documentation
+- Figma Plugin API documentation
+- Community contributors and testers
 
-## License
+## 📞 Support
 
-MIT License
+If you encounter any issues or have questions:
 
-## Contributing
+1. Check the [Issues](https://github.com/[your-organization]/image-reference-copy-extension/issues) page
+2. Create a new issue with detailed information
+3. Include browser version, extension version, and steps to reproduce
 
-Please report bugs or suggest features by creating an issue.
+---
+
+**Made with ❤️ for the design community**
