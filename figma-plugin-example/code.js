@@ -68,7 +68,7 @@ function handleImageImport(imageData) {
 function createImageWithFallback(imageData) {
   console.log('=== TRYING IMAGE CREATION METHODS ===');
   
-  // Method 1: Try figma.createImageFromUrl
+  // Method 1: Try figma.createImageFromUrl (newer API)
   if (typeof figma.createImageFromUrl === 'function') {
     console.log('✅ Trying figma.createImageFromUrl...');
     figma.createImageFromUrl(imageData.imageUrl).then(function(image) {
@@ -79,10 +79,63 @@ function createImageWithFallback(imageData) {
       // Try alternative method
       createImageAlternative(imageData);
     });
-  } else {
-    console.log('❌ figma.createImageFromUrl not available, trying alternative...');
-    createImageAlternative(imageData);
   }
+  // Method 2: Try figma.createImage (older API)
+  else if (typeof figma.createImage === 'function') {
+    console.log('✅ Trying figma.createImage...');
+    try {
+      var image = figma.createImage(imageData.imageUrl);
+      console.log('✅ Image created successfully with createImage:', image);
+      processImage(image, imageData);
+    } catch (error) {
+      console.error('❌ createImage failed:', error);
+      createImageAlternative(imageData);
+    }
+  }
+  // Method 3: Try using fetch to get image data
+  else {
+    console.log('❌ Direct image creation APIs not available, trying fetch method...');
+    createImageWithFetch(imageData);
+  }
+}
+
+// Create image using fetch method
+function createImageWithFetch(imageData) {
+  console.log('=== TRYING FETCH METHOD ===');
+  
+  // Check if fetch is available
+  if (typeof fetch !== 'function') {
+    console.log('❌ Fetch not available, using alternative method');
+    createImageAlternative(imageData);
+    return;
+  }
+  
+  // Try to fetch the image
+  fetch(imageData.imageUrl)
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error('Failed to fetch image: ' + response.status);
+      }
+      return response.arrayBuffer();
+    })
+    .then(function(arrayBuffer) {
+      console.log('✅ Image fetched successfully, size:', arrayBuffer.byteLength);
+      
+      // Try to create image from array buffer
+      if (typeof figma.createImageFromBytes === 'function') {
+        return figma.createImageFromBytes(new Uint8Array(arrayBuffer));
+      } else {
+        throw new Error('createImageFromBytes not available');
+      }
+    })
+    .then(function(image) {
+      console.log('✅ Image created from bytes:', image);
+      processImage(image, imageData);
+    })
+    .catch(function(error) {
+      console.error('❌ Fetch method failed:', error);
+      createImageAlternative(imageData);
+    });
 }
 
 // Alternative image creation method
@@ -286,10 +339,19 @@ function createReferenceInfo(frame, imageData, width, height) {
   
   // Set font names after text creation (fonts should already be loaded)
   try {
-    title.fontName = { family: "Inter", style: "Regular" };
-    details.fontName = { family: "Inter", style: "Regular" };
-    if (timestamp) timestamp.fontName = { family: "Inter", style: "Regular" };
-    if (sourceIndicator) sourceIndicator.fontName = { family: "Inter", style: "Regular" };
+    // Only set font name if it's available and not causing errors
+    if (title && title.fontName !== undefined) {
+      title.fontName = { family: "Inter", style: "Regular" };
+    }
+    if (details && details.fontName !== undefined) {
+      details.fontName = { family: "Inter", style: "Regular" };
+    }
+    if (timestamp && timestamp.fontName !== undefined) {
+      timestamp.fontName = { family: "Inter", style: "Regular" };
+    }
+    if (sourceIndicator && sourceIndicator.fontName !== undefined) {
+      sourceIndicator.fontName = { family: "Inter", style: "Regular" };
+    }
     console.log('✅ Font names set successfully');
   } catch (fontError) {
     console.log('⚠️ Font name setting failed, using default font:', fontError);
@@ -329,6 +391,8 @@ function handleImportError(error) {
     errorMessage = 'Figma API not available. Please update Figma or try a different approach.';
   } else if (error.message.indexOf('unloaded font') !== -1) {
     errorMessage = 'Font loading issue. Please try again.';
+  } else if (error.message.indexOf('no setter for property') !== -1) {
+    errorMessage = 'Font setting issue. Using default font.';
   } else {
     errorMessage = 'Image import failed: ' + error.message;
   }
