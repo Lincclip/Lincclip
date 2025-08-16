@@ -36,6 +36,14 @@ figma.ui.onmessage = function(msg) {
     console.log('Handling init message:', msg.message);
     figma.ui.postMessage({ type: 'success', message: 'Plugin initialized successfully!' });
   }
+  
+  if (msg.type === 'add-domain') {
+    console.log('Handling add-domain message:', msg.domain);
+    figma.ui.postMessage({ 
+      type: 'info', 
+      message: 'To add domain "' + msg.domain + '" to allowed list, please update manifest.json and reload the plugin.' 
+    });
+  }
 };
 
 // Handle image import
@@ -98,8 +106,11 @@ function createImageWithFetch(imageData) {
     return;
   }
   
-  // Try to fetch the image
-  fetch(imageData.imageUrl)
+  // Try to fetch the image with proxy fallback
+  var imageUrl = imageData.imageUrl;
+  
+  // First try direct fetch
+  fetch(imageUrl)
     .then(function(response) {
       if (!response.ok) {
         throw new Error('Failed to fetch image: ' + response.status);
@@ -123,8 +134,76 @@ function createImageWithFetch(imageData) {
       processImage(image, imageData);
     })
     .catch(function(error) {
-      console.error('❌ Fetch method failed:', error);
-      createImageAlternative(imageData);
+      console.error('❌ Direct fetch failed:', error);
+      
+      // Check if it's a CSP error and try proxy
+      if (error.message.includes('CSP') || error.message.includes('Content Security Policy') || 
+          error.message.includes('Failed to fetch') || error.message.includes('not in the list of allowed domains')) {
+        console.log('⚠️ CSP violation detected, trying proxy...');
+        
+        // Try proxy services
+        var proxyUrls = [
+          'https://cors-anywhere.herokuapp.com/',
+          'https://api.allorigins.win/raw?url=',
+          'https://thingproxy.freeboard.io/fetch/',
+          'https://corsproxy.io/?'
+        ];
+        
+        tryProxyServices(imageData, proxyUrls, 0);
+      } else {
+        figma.ui.postMessage({ 
+          type: 'warning', 
+          message: 'Image fetch failed. Creating reference placeholder instead.' 
+        });
+        createImageAlternative(imageData);
+      }
+    });
+}
+
+// Try proxy services for image fetching
+function tryProxyServices(imageData, proxyUrls, index) {
+  if (index >= proxyUrls.length) {
+    console.log('❌ All proxy services failed, using alternative method');
+    figma.ui.postMessage({ 
+      type: 'warning', 
+      message: 'All proxy services failed. Creating reference placeholder instead.' 
+    });
+    createImageAlternative(imageData);
+    return;
+  }
+  
+  var proxyUrl = proxyUrls[index];
+  var fullUrl = proxyUrl + encodeURIComponent(imageData.imageUrl);
+  
+  console.log('🔄 Trying proxy service:', proxyUrl);
+  
+  fetch(fullUrl)
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error('Proxy service failed: ' + response.status);
+      }
+      return response.arrayBuffer();
+    })
+    .then(function(arrayBuffer) {
+      console.log('✅ Image fetched successfully via proxy, size:', arrayBuffer.byteLength);
+      
+      // Try to create image from array buffer
+      if (typeof figma.createImageFromBytes === 'function') {
+        return figma.createImageFromBytes(new Uint8Array(arrayBuffer));
+      } else if (typeof figma.createImage === 'function') {
+        return figma.createImage(new Uint8Array(arrayBuffer));
+      } else {
+        throw new Error('No image creation API available');
+      }
+    })
+    .then(function(image) {
+      console.log('✅ Image created from proxy bytes:', image);
+      processImage(image, imageData);
+    })
+    .catch(function(error) {
+      console.error('❌ Proxy service failed:', proxyUrl, error);
+      // Try next proxy service
+      tryProxyServices(imageData, proxyUrls, index + 1);
     });
 }
 
@@ -137,14 +216,25 @@ function createImageAlternative(imageData) {
     var frame = figma.createFrame();
     frame.name = 'Image Reference - ' + (imageData.altText || 'Image');
     
-    // Set image size based on imageInfo
+    // Set image size based on imageInfo with better fallbacks
     var imageInfo = imageData.imageInfo || {};
-    var width = imageInfo.naturalWidth || imageInfo.displayWidth || 300;
-    var height = imageInfo.naturalHeight || imageInfo.displayHeight || 200;
+    var width = imageInfo.naturalWidth || imageInfo.displayWidth || imageInfo.width || 300;
+    var height = imageInfo.naturalHeight || imageInfo.displayHeight || imageInfo.height || 200;
     
-    // Ensure minimum size
+    // Log the image info for debugging
+    console.log('Image info:', imageInfo);
+    console.log('Calculated dimensions:', width, 'x', height);
+    
+    // Ensure minimum size and reasonable aspect ratio
     width = Math.max(width, 100);
     height = Math.max(height, 100);
+    
+    // If we have a very wide image, cap the width and adjust height proportionally
+    if (width > 2000) {
+      var aspectRatio = width / height;
+      width = 2000;
+      height = Math.round(width / aspectRatio);
+    }
     
     console.log('Setting frame size to:', width, 'x', height);
     frame.resize(width, height);
@@ -174,7 +264,7 @@ function createImageAlternative(imageData) {
     // Send success message
     figma.ui.postMessage({ 
       type: 'success', 
-      message: 'Image reference created (placeholder mode). Image URL: ' + imageData.imageUrl 
+      message: '✅ Image reference created successfully! Size: ' + width + 'x' + height + 'px. URL: ' + imageData.imageUrl 
     });
     
   } catch (error) {
@@ -194,12 +284,24 @@ function processImage(image, imageData) {
   
   // Set image size based on imageInfo or use image dimensions
   var imageInfo = imageData.imageInfo || {};
-  var width = imageInfo.naturalWidth || imageInfo.displayWidth || image.width || 300;
-  var height = imageInfo.naturalHeight || imageInfo.displayHeight || image.height || 200;
+  var width = imageInfo.naturalWidth || imageInfo.displayWidth || imageInfo.width || image.width || 300;
+  var height = imageInfo.naturalHeight || imageInfo.displayHeight || imageInfo.height || image.height || 200;
   
-  // Ensure minimum size
+  // Log the image info for debugging
+  console.log('Image info:', imageInfo);
+  console.log('Image dimensions:', image.width, 'x', image.height);
+  console.log('Calculated dimensions:', width, 'x', height);
+  
+  // Ensure minimum size and reasonable aspect ratio
   width = Math.max(width, 100);
   height = Math.max(height, 100);
+  
+  // If we have a very wide image, cap the width and adjust height proportionally
+  if (width > 2000) {
+    var aspectRatio = width / height;
+    width = 2000;
+    height = Math.round(width / aspectRatio);
+  }
   
   console.log('Setting frame size to:', width, 'x', height);
   frame.resize(width, height);
@@ -236,7 +338,7 @@ function processImage(image, imageData) {
 function createReferenceInfoWithFonts(frame, imageData, width, height) {
   console.log('=== CREATING REFERENCE INFO WITH FONTS ===');
   
-  // First, load fonts before creating any text
+  // Load fonts before creating any text
   figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
     console.log('✅ Fonts loaded successfully, now creating reference info');
     createReferenceInfo(frame, imageData, width, height);
@@ -261,6 +363,9 @@ function createReferenceInfo(frame, imageData, width, height) {
   container.paddingTop = 0;
   container.paddingBottom = 0;
   
+  // Set container height to match image height
+  container.resize(width + 320, height); // 320 = reference frame width + spacing
+  
   // Add image frame to container
   container.appendChild(frame);
   
@@ -273,7 +378,7 @@ function createReferenceInfo(frame, imageData, width, height) {
   referenceFrame.paddingRight = 16;
   referenceFrame.paddingTop = 16;
   referenceFrame.paddingBottom = 16;
-  referenceFrame.resize(300, 200);
+  referenceFrame.resize(300, height); // Match container height
   referenceFrame.fills = [{ type: 'SOLID', color: { r: 0.95, g: 0.95, b: 0.95 } }];
   referenceFrame.cornerRadius = 8;
   
@@ -281,7 +386,6 @@ function createReferenceInfo(frame, imageData, width, height) {
   var title = figma.createText();
   title.characters = '📋 Image Reference';
   title.fontSize = 16;
-  title.fontWeight = 600;
   referenceFrame.appendChild(title);
   
   // Add reference details
@@ -298,7 +402,6 @@ function createReferenceInfo(frame, imageData, width, height) {
   
   details.characters = detailsText;
   details.fontSize = 11;
-  details.lineHeight = { value: 16, unit: 'PIXELS' };
   referenceFrame.appendChild(details);
   
   // Add timestamp if available
@@ -308,7 +411,6 @@ function createReferenceInfo(frame, imageData, width, height) {
     var date = new Date(imageData.timestamp);
     timestamp.characters = '🕒 Copied: ' + date.toLocaleString();
     timestamp.fontSize = 10;
-    timestamp.fills = [{ type: 'SOLID', color: { r: 0.5, g: 0.5, b: 0.5 } }];
     referenceFrame.appendChild(timestamp);
   }
   
@@ -318,7 +420,6 @@ function createReferenceInfo(frame, imageData, width, height) {
     sourceIndicator = figma.createText();
     sourceIndicator.characters = '✅ ' + imageData.metadata.originalSource;
     sourceIndicator.fontSize = 10;
-    sourceIndicator.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.6, b: 0.2 } }];
     referenceFrame.appendChild(sourceIndicator);
   }
   
@@ -351,8 +452,8 @@ function handleImportError(error) {
   // Provide more detailed error messages
   var errorMessage = 'Image import failed.';
   
-  if (error.message.indexOf('CORS') !== -1) {
-    errorMessage = 'Cannot fetch image due to CORS policy. Try a different image.';
+  if (error.message.indexOf('CORS') !== -1 || error.message.indexOf('Content Security Policy') !== -1) {
+    errorMessage = 'Image blocked by security policy. Domain not in allowed list. Creating reference placeholder instead.';
   } else if (error.message.indexOf('404') !== -1) {
     errorMessage = 'Image not found. Please check the URL.';
   } else if (error.message.indexOf('network') !== -1) {
@@ -369,6 +470,8 @@ function handleImportError(error) {
     errorMessage = 'Font setting issue. Using default font.';
   } else if (error.message.indexOf('Uint8Array') !== -1) {
     errorMessage = 'Image format issue. Using placeholder mode.';
+  } else if (error.message.indexOf('Failed to fetch') !== -1) {
+    errorMessage = 'Image fetch failed. Domain may not be allowed. Creating reference placeholder.';
   } else {
     errorMessage = 'Image import failed: ' + error.message;
   }
