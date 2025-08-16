@@ -116,8 +116,8 @@ function createImageAlternative(imageData) {
     // Add the placeholder to the frame
     frame.appendChild(placeholder);
     
-    // Create reference information
-    createReferenceInfo(frame, imageData, width, height);
+    // Create reference information with font loading
+    createReferenceInfoWithFonts(frame, imageData, width, height);
     
     // Position and select
     frame.x = figma.viewport.center.x - frame.width / 2;
@@ -170,8 +170,8 @@ function processImage(image, imageData) {
   
   console.log('✅ Image frame created successfully');
   
-  // Create reference information
-  createReferenceInfo(frame, imageData, width, height);
+  // Create reference information with font loading
+  createReferenceInfoWithFonts(frame, imageData, width, height);
   
   // Position and select
   frame.x = figma.viewport.center.x - frame.width / 2;
@@ -186,6 +186,21 @@ function processImage(image, imageData) {
   figma.ui.postMessage({ 
     type: 'success', 
     message: 'Image reference imported successfully!' 
+  });
+}
+
+// Create reference information with proper font loading
+function createReferenceInfoWithFonts(frame, imageData, width, height) {
+  console.log('=== CREATING REFERENCE INFO WITH FONTS ===');
+  
+  // First, load fonts before creating any text
+  figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
+    console.log('✅ Fonts loaded successfully, now creating reference info');
+    createReferenceInfo(frame, imageData, width, height);
+  }).catch(function(fontError) {
+    console.log('⚠️ Font loading failed, using default font:', fontError);
+    // Still create reference info with default font
+    createReferenceInfo(frame, imageData, width, height);
   });
 }
 
@@ -269,16 +284,16 @@ function createReferenceInfo(frame, imageData, width, height) {
   
   console.log('✅ Reference frame created successfully');
   
-  // Load fonts for text elements
-  figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
+  // Set font names after text creation (fonts should already be loaded)
+  try {
     title.fontName = { family: "Inter", style: "Regular" };
     details.fontName = { family: "Inter", style: "Regular" };
     if (timestamp) timestamp.fontName = { family: "Inter", style: "Regular" };
     if (sourceIndicator) sourceIndicator.fontName = { family: "Inter", style: "Regular" };
-    console.log('✅ Fonts loaded successfully');
-  }).catch(function(fontError) {
-    console.log('⚠️ Font loading failed, using default font:', fontError);
-  });
+    console.log('✅ Font names set successfully');
+  } catch (fontError) {
+    console.log('⚠️ Font name setting failed, using default font:', fontError);
+  }
   
   // Position container
   container.x = figma.viewport.center.x - container.width / 2;
@@ -312,6 +327,8 @@ function handleImportError(error) {
     errorMessage = 'Server error. Please try again later.';
   } else if (error.message.indexOf('not a function') !== -1) {
     errorMessage = 'Figma API not available. Please update Figma or try a different approach.';
+  } else if (error.message.indexOf('unloaded font') !== -1) {
+    errorMessage = 'Font loading issue. Please try again.';
   } else {
     errorMessage = 'Image import failed: ' + error.message;
   }
