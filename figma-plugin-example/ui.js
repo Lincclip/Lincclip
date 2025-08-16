@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var reimportBtn2 = document.getElementById('reimportBtn2');
     var statusDiv = document.getElementById('status');
     
+    console.log('Figma plugin UI loaded');
+    
     // Tab switching functionality
     var methodTabs = document.querySelectorAll('.method-tab');
     var methodContents = document.querySelectorAll('.method-content');
@@ -15,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
     for (var i = 0; i < methodTabs.length; i++) {
         methodTabs[i].addEventListener('click', function() {
             var method = this.getAttribute('data-method');
+            console.log('Switching to method:', method);
             
             // Activate tab
             for (var j = 0; j < methodTabs.length; j++) {
@@ -34,6 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Image import button click event
     importBtn.addEventListener('click', function() {
+        console.log('Import button clicked');
         var jsonData = imageDataTextarea.value.trim();
         
         if (!jsonData) {
@@ -43,6 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             var imageData = JSON.parse(jsonData);
+            console.log('Parsed image data:', imageData);
             
             // Data validation
             if (!imageData.type || imageData.type !== 'image_reference') {
@@ -64,6 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Send data to Figma
+            console.log('Sending data to Figma:', imageData);
             parent.postMessage({
                 pluginMessage: {
                     type: 'import-image-reference',
@@ -81,12 +87,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Clear button click event
     clearBtn.addEventListener('click', function() {
+        console.log('Clear button clicked');
         imageDataTextarea.value = '';
         hideStatus();
     });
     
     // Reimport last data buttons
     reimportBtn.addEventListener('click', function() {
+        console.log('Reimport button clicked');
         parent.postMessage({
             pluginMessage: {
                 type: 'reimport-last'
@@ -96,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     reimportBtn2.addEventListener('click', function() {
+        console.log('Reimport button 2 clicked');
         parent.postMessage({
             pluginMessage: {
                 type: 'reimport-last'
@@ -106,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Auto fetch from Chrome extension
     fetchBtn.addEventListener('click', function() {
+        console.log('Fetch button clicked');
         parent.postMessage({
             pluginMessage: {
                 type: 'fetch-from-extension'
@@ -116,6 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show status message function
     function showStatus(message, type) {
+        console.log('Showing status:', type, message);
         statusDiv.textContent = message;
         statusDiv.className = 'status ' + type;
         statusDiv.style.display = 'block';
@@ -132,12 +143,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Hide status message function
     function hideStatus() {
+        console.log('Hiding status');
         statusDiv.style.display = 'none';
         statusDiv.style.opacity = '1';
     }
     
     // Receive messages from Figma
     window.onmessage = function(event) {
+        console.log('Received message from Figma:', event.data);
         var message = event.data.pluginMessage;
         
         if (message) {
@@ -159,12 +172,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Auto paste detection from clipboard
     imageDataTextarea.addEventListener('paste', function(e) {
+        console.log('Paste event detected');
         // Wait a bit after paste then auto validate
         setTimeout(function() {
             var pastedData = imageDataTextarea.value.trim();
             if (pastedData) {
                 try {
                     var parsed = JSON.parse(pastedData);
+                    console.log('Pasted data validation:', parsed);
                     if (parsed.type === 'image_reference') {
                         showStatus('Valid image data detected!', 'success');
                         setTimeout(hideStatus, 2000);
@@ -173,6 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         setTimeout(hideStatus, 4000);
                     }
                 } catch (error) {
+                    console.error('Paste validation error:', error);
                     showStatus('Not JSON format. Please copy again from Chrome extension.', 'error');
                     setTimeout(hideStatus, 4000);
                 }
@@ -199,19 +215,28 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ctrl/Cmd + Enter to import
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
+            console.log('Keyboard shortcut: Import');
             importBtn.click();
         }
         
         // Ctrl/Cmd + K to clear text area
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
+            console.log('Keyboard shortcut: Clear');
             clearBtn.click();
         }
         
         // Ctrl/Cmd + R to reimport last data
         if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
             e.preventDefault();
+            console.log('Keyboard shortcut: Reimport');
             reimportBtn.click();
         }
     });
+    
+    // Add some helpful tips
+    console.log('Plugin UI ready. Tips:');
+    console.log('- Use Ctrl/Cmd + Enter to import');
+    console.log('- Use Ctrl/Cmd + K to clear');
+    console.log('- Use Ctrl/Cmd + R to reimport');
 });
