@@ -32,18 +32,42 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       function: (imageUrl, pageUrl, altText) => {
         // Function to find the actual source URL for Google Images
         function findOriginalSourceUrl(imgElement) {
-          console.log("Finding original source for image:", imgElement);
+          console.log("=== STARTING ORIGINAL SOURCE SEARCH ===");
+          console.log("Image element:", imgElement);
+          console.log("Current page URL:", window.location.href);
           
           // Check if we're on Google Images
           if (window.location.hostname.includes('google.com') && window.location.pathname.includes('/search')) {
-            console.log("Detected Google Images search page");
+            console.log("✅ Detected Google Images search page");
             
-            // Method 1: Look for data-lpage attribute in parent elements
+            // Method 1: Direct search for data-lpage in the entire page
+            console.log("🔍 Method 1: Searching for data-lpage attributes...");
+            const allElementsWithLpage = document.querySelectorAll('[data-lpage]');
+            console.log("Found", allElementsWithLpage.length, "elements with data-lpage");
+            
+            for (let i = 0; i < allElementsWithLpage.length; i++) {
+              const el = allElementsWithLpage[i];
+              const lpageUrl = el.getAttribute('data-lpage');
+              console.log(`Element ${i}:`, el, "data-lpage:", lpageUrl);
+              
+              // Check if this element contains our target image
+              const imagesInEl = el.querySelectorAll('img');
+              for (let img of imagesInEl) {
+                if (img.src === imageUrl) {
+                  console.log("🎯 FOUND MATCH! Image found in element with data-lpage:", lpageUrl);
+                  return lpageUrl;
+                }
+              }
+            }
+            
+            // Method 2: Look for parent elements with data-lpage
+            console.log("🔍 Method 2: Searching parent elements for data-lpage...");
             let element = imgElement;
-            for (let i = 0; i < 15; i++) { // Search up to 15 levels up
+            for (let i = 0; i < 20; i++) { // Search up to 20 levels up
               if (element && element.getAttribute('data-lpage')) {
-                console.log("Found data-lpage in parent:", element.getAttribute('data-lpage'));
-                return element.getAttribute('data-lpage');
+                const lpageUrl = element.getAttribute('data-lpage');
+                console.log("🎯 FOUND data-lpage in parent level", i, ":", lpageUrl);
+                return lpageUrl;
               }
               if (element && element.parentElement) {
                 element = element.parentElement;
@@ -52,47 +76,38 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
               }
             }
             
-            // Method 2: Look for any element with data-lpage that contains our image
-            const elementsWithLpage = document.querySelectorAll('[data-lpage]');
-            console.log("Found", elementsWithLpage.length, "elements with data-lpage");
+            // Method 3: Look for any link that contains the original URL
+            console.log("🔍 Method 3: Searching for links with original URLs...");
+            const allLinks = document.querySelectorAll('a[href*="http"]');
+            console.log("Found", allLinks.length, "links with http");
             
-            for (let el of elementsWithLpage) {
-              const imagesInEl = el.querySelectorAll('img');
-              for (let img of imagesInEl) {
-                if (img.src === imageUrl) {
-                  console.log("Found matching image in element with data-lpage:", el.getAttribute('data-lpage'));
-                  return el.getAttribute('data-lpage');
-                }
-              }
-            }
-            
-            // Method 3: Look for imgrefurl in the page URL or nearby elements
-            const urlParams = new URLSearchParams(window.location.search);
-            const imgrefurl = urlParams.get('imgrefurl');
-            if (imgrefurl) {
-              console.log("Found imgrefurl in URL params:", imgrefurl);
-              return decodeURIComponent(imgrefurl);
-            }
-            
-            // Method 4: Look for any link that might contain the original URL
-            const links = document.querySelectorAll('a[href*="http"]');
-            for (let link of links) {
+            for (let link of allLinks) {
               const href = link.getAttribute('href');
-              if (href && !href.includes('google.com') && !href.includes('imgres')) {
-                // Check if this link is near our image
-                const linkRect = link.getBoundingClientRect();
-                const imgRect = imgElement.getBoundingClientRect();
+              if (href && !href.includes('google.com') && !href.includes('imgres') && !href.includes('search')) {
+                console.log("Found non-Google link:", href);
                 
-                // If link is close to image (within 100px)
-                if (Math.abs(linkRect.top - imgRect.top) < 100 && 
-                    Math.abs(linkRect.left - imgRect.left) < 100) {
-                  console.log("Found nearby link:", href);
-                  return href;
+                // Check if this link is near our image
+                try {
+                  const linkRect = link.getBoundingClientRect();
+                  const imgRect = imgElement.getBoundingClientRect();
+                  
+                  const distance = Math.sqrt(
+                    Math.pow(linkRect.top - imgRect.top, 2) + 
+                    Math.pow(linkRect.left - imgRect.left, 2)
+                  );
+                  
+                  if (distance < 300) { // Within 300px
+                    console.log("🎯 FOUND nearby link:", href, "distance:", distance);
+                    return href;
+                  }
+                } catch (e) {
+                  console.log("Error calculating distance:", e);
                 }
               }
             }
             
-            // Method 5: Look for any text that looks like a URL near the image
+            // Method 4: Look for any text that contains URLs
+            console.log("🔍 Method 4: Searching for URL text...");
             const walker = document.createTreeWalker(
               document.body,
               NodeFilter.SHOW_TEXT,
@@ -101,67 +116,69 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
             );
             
             let textNode;
+            let urlCount = 0;
             while (textNode = walker.nextNode()) {
               const text = textNode.textContent;
               if (text.includes('http') && !text.includes('google.com')) {
-                const urlMatch = text.match(/https?:\/\/[^\s]+/);
-                if (urlMatch) {
-                  const url = urlMatch[0];
-                  // Check if this text is near our image
-                  const textRect = textNode.parentElement.getBoundingClientRect();
-                  const imgRect = imgElement.getBoundingClientRect();
-                  
-                  if (Math.abs(textRect.top - imgRect.top) < 200 && 
-                      Math.abs(textRect.left - imgRect.left) < 200) {
-                    console.log("Found URL in nearby text:", url);
-                    return url;
+                const urlMatches = text.match(/https?:\/\/[^\s]+/g);
+                if (urlMatches) {
+                  for (let url of urlMatches) {
+                    urlCount++;
+                    console.log(`URL ${urlCount}:`, url);
+                    
+                    try {
+                      const textRect = textNode.parentElement.getBoundingClientRect();
+                      const imgRect = imgElement.getBoundingClientRect();
+                      
+                      const distance = Math.sqrt(
+                        Math.pow(textRect.top - imgRect.top, 2) + 
+                        Math.pow(textRect.left - imgRect.left, 2)
+                      );
+                      
+                      if (distance < 500) { // Within 500px
+                        console.log("🎯 FOUND nearby URL text:", url, "distance:", distance);
+                        return url;
+                      }
+                    } catch (e) {
+                      console.log("Error calculating text distance:", e);
+                    }
                   }
                 }
               }
             }
             
-            // Method 6: Look for specific Google Images structure
-            // Find the container that holds the image and look for source information
+            // Method 5: Look for specific Google Images structure
+            console.log("🔍 Method 5: Searching for Google Images specific structure...");
             let container = imgElement;
-            for (let i = 0; i < 10; i++) {
-              if (container && container.classList.contains('eA0Zlc')) {
-                console.log("Found eA0Zlc container");
-                // Look for any link or text that might contain the source
-                const sourceElements = container.querySelectorAll('a[href*="http"], span, div');
-                for (let el of sourceElements) {
-                  const text = el.textContent || el.getAttribute('href') || '';
-                  if (text.includes('http') && !text.includes('google.com') && !text.includes('imgres')) {
-                    const urlMatch = text.match(/https?:\/\/[^\s]+/);
+            for (let i = 0; i < 15; i++) {
+              if (container) {
+                console.log(`Container level ${i}:`, container.className, container.id);
+                
+                // Look for any attribute that might contain a URL
+                const attributes = container.attributes;
+                for (let attr of attributes) {
+                  if (attr.value && attr.value.includes('http') && !attr.value.includes('google.com')) {
+                    const urlMatch = attr.value.match(/https?:\/\/[^\s;]+/);
                     if (urlMatch) {
-                      console.log("Found URL in container:", urlMatch[0]);
+                      console.log("🎯 FOUND URL in attribute", attr.name, ":", urlMatch[0]);
                       return urlMatch[0];
                     }
                   }
                 }
-                break;
-              }
-              if (container && container.parentElement) {
-                container = container.parentElement;
-              } else {
-                break;
-              }
-            }
-            
-            // Method 7: Look for any element with jsdata that might contain URL info
-            const jsdataElements = document.querySelectorAll('[jsdata]');
-            for (let el of jsdataElements) {
-              const jsdata = el.getAttribute('jsdata');
-              if (jsdata && jsdata.includes('http')) {
-                const urlMatch = jsdata.match(/https?:\/\/[^\s;]+/);
-                if (urlMatch && !urlMatch[0].includes('google.com')) {
-                  console.log("Found URL in jsdata:", urlMatch[0]);
-                  return urlMatch[0];
+                
+                if (container.parentElement) {
+                  container = container.parentElement;
+                } else {
+                  break;
                 }
               }
             }
+            
+            console.log("❌ Could not find original source URL");
+          } else {
+            console.log("Not on Google Images, using current page URL");
           }
           
-          console.log("Could not find original source, using current page URL");
           return pageUrl; // Fallback to current page URL
         }
         
@@ -175,6 +192,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
             break;
           }
         }
+        
+        console.log("Final original source URL:", originalSourceUrl);
         
         // Create text with original source URL
         const text = `Image URL: ${imageUrl}\nPage URL: ${originalSourceUrl}\nImage Description: ${altText || "Image"}`;
@@ -210,18 +229,42 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       function: (imageUrl, pageUrl, altText) => {
         // Function to find the actual source URL for Google Images
         function findOriginalSourceUrl(imgElement) {
-          console.log("Finding original source for image:", imgElement);
+          console.log("=== STARTING ORIGINAL SOURCE SEARCH ===");
+          console.log("Image element:", imgElement);
+          console.log("Current page URL:", window.location.href);
           
           // Check if we're on Google Images
           if (window.location.hostname.includes('google.com') && window.location.pathname.includes('/search')) {
-            console.log("Detected Google Images search page");
+            console.log("✅ Detected Google Images search page");
             
-            // Method 1: Look for data-lpage attribute in parent elements
+            // Method 1: Direct search for data-lpage in the entire page
+            console.log("🔍 Method 1: Searching for data-lpage attributes...");
+            const allElementsWithLpage = document.querySelectorAll('[data-lpage]');
+            console.log("Found", allElementsWithLpage.length, "elements with data-lpage");
+            
+            for (let i = 0; i < allElementsWithLpage.length; i++) {
+              const el = allElementsWithLpage[i];
+              const lpageUrl = el.getAttribute('data-lpage');
+              console.log(`Element ${i}:`, el, "data-lpage:", lpageUrl);
+              
+              // Check if this element contains our target image
+              const imagesInEl = el.querySelectorAll('img');
+              for (let img of imagesInEl) {
+                if (img.src === imageUrl) {
+                  console.log("🎯 FOUND MATCH! Image found in element with data-lpage:", lpageUrl);
+                  return lpageUrl;
+                }
+              }
+            }
+            
+            // Method 2: Look for parent elements with data-lpage
+            console.log("🔍 Method 2: Searching parent elements for data-lpage...");
             let element = imgElement;
-            for (let i = 0; i < 15; i++) { // Search up to 15 levels up
+            for (let i = 0; i < 20; i++) { // Search up to 20 levels up
               if (element && element.getAttribute('data-lpage')) {
-                console.log("Found data-lpage in parent:", element.getAttribute('data-lpage'));
-                return element.getAttribute('data-lpage');
+                const lpageUrl = element.getAttribute('data-lpage');
+                console.log("🎯 FOUND data-lpage in parent level", i, ":", lpageUrl);
+                return lpageUrl;
               }
               if (element && element.parentElement) {
                 element = element.parentElement;
@@ -230,47 +273,38 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
               }
             }
             
-            // Method 2: Look for any element with data-lpage that contains our image
-            const elementsWithLpage = document.querySelectorAll('[data-lpage]');
-            console.log("Found", elementsWithLpage.length, "elements with data-lpage");
+            // Method 3: Look for any link that contains the original URL
+            console.log("🔍 Method 3: Searching for links with original URLs...");
+            const allLinks = document.querySelectorAll('a[href*="http"]');
+            console.log("Found", allLinks.length, "links with http");
             
-            for (let el of elementsWithLpage) {
-              const imagesInEl = el.querySelectorAll('img');
-              for (let img of imagesInEl) {
-                if (img.src === imageUrl) {
-                  console.log("Found matching image in element with data-lpage:", el.getAttribute('data-lpage'));
-                  return el.getAttribute('data-lpage');
-                }
-              }
-            }
-            
-            // Method 3: Look for imgrefurl in the page URL or nearby elements
-            const urlParams = new URLSearchParams(window.location.search);
-            const imgrefurl = urlParams.get('imgrefurl');
-            if (imgrefurl) {
-              console.log("Found imgrefurl in URL params:", imgrefurl);
-              return decodeURIComponent(imgrefurl);
-            }
-            
-            // Method 4: Look for any link that might contain the original URL
-            const links = document.querySelectorAll('a[href*="http"]');
-            for (let link of links) {
+            for (let link of allLinks) {
               const href = link.getAttribute('href');
-              if (href && !href.includes('google.com') && !href.includes('imgres')) {
-                // Check if this link is near our image
-                const linkRect = link.getBoundingClientRect();
-                const imgRect = imgElement.getBoundingClientRect();
+              if (href && !href.includes('google.com') && !href.includes('imgres') && !href.includes('search')) {
+                console.log("Found non-Google link:", href);
                 
-                // If link is close to image (within 100px)
-                if (Math.abs(linkRect.top - imgRect.top) < 100 && 
-                    Math.abs(linkRect.left - imgRect.left) < 100) {
-                  console.log("Found nearby link:", href);
-                  return href;
+                // Check if this link is near our image
+                try {
+                  const linkRect = link.getBoundingClientRect();
+                  const imgRect = imgElement.getBoundingClientRect();
+                  
+                  const distance = Math.sqrt(
+                    Math.pow(linkRect.top - imgRect.top, 2) + 
+                    Math.pow(linkRect.left - imgRect.left, 2)
+                  );
+                  
+                  if (distance < 300) { // Within 300px
+                    console.log("🎯 FOUND nearby link:", href, "distance:", distance);
+                    return href;
+                  }
+                } catch (e) {
+                  console.log("Error calculating distance:", e);
                 }
               }
             }
             
-            // Method 5: Look for any text that looks like a URL near the image
+            // Method 4: Look for any text that contains URLs
+            console.log("🔍 Method 4: Searching for URL text...");
             const walker = document.createTreeWalker(
               document.body,
               NodeFilter.SHOW_TEXT,
@@ -279,67 +313,69 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
             );
             
             let textNode;
+            let urlCount = 0;
             while (textNode = walker.nextNode()) {
               const text = textNode.textContent;
               if (text.includes('http') && !text.includes('google.com')) {
-                const urlMatch = text.match(/https?:\/\/[^\s]+/);
-                if (urlMatch) {
-                  const url = urlMatch[0];
-                  // Check if this text is near our image
-                  const textRect = textNode.parentElement.getBoundingClientRect();
-                  const imgRect = imgElement.getBoundingClientRect();
-                  
-                  if (Math.abs(textRect.top - imgRect.top) < 200 && 
-                      Math.abs(textRect.left - imgRect.left) < 200) {
-                    console.log("Found URL in nearby text:", url);
-                    return url;
+                const urlMatches = text.match(/https?:\/\/[^\s]+/g);
+                if (urlMatches) {
+                  for (let url of urlMatches) {
+                    urlCount++;
+                    console.log(`URL ${urlCount}:`, url);
+                    
+                    try {
+                      const textRect = textNode.parentElement.getBoundingClientRect();
+                      const imgRect = imgElement.getBoundingClientRect();
+                      
+                      const distance = Math.sqrt(
+                        Math.pow(textRect.top - imgRect.top, 2) + 
+                        Math.pow(textRect.left - imgRect.left, 2)
+                      );
+                      
+                      if (distance < 500) { // Within 500px
+                        console.log("🎯 FOUND nearby URL text:", url, "distance:", distance);
+                        return url;
+                      }
+                    } catch (e) {
+                      console.log("Error calculating text distance:", e);
+                    }
                   }
                 }
               }
             }
             
-            // Method 6: Look for specific Google Images structure
-            // Find the container that holds the image and look for source information
+            // Method 5: Look for specific Google Images structure
+            console.log("🔍 Method 5: Searching for Google Images specific structure...");
             let container = imgElement;
-            for (let i = 0; i < 10; i++) {
-              if (container && container.classList.contains('eA0Zlc')) {
-                console.log("Found eA0Zlc container");
-                // Look for any link or text that might contain the source
-                const sourceElements = container.querySelectorAll('a[href*="http"], span, div');
-                for (let el of sourceElements) {
-                  const text = el.textContent || el.getAttribute('href') || '';
-                  if (text.includes('http') && !text.includes('google.com') && !text.includes('imgres')) {
-                    const urlMatch = text.match(/https?:\/\/[^\s]+/);
+            for (let i = 0; i < 15; i++) {
+              if (container) {
+                console.log(`Container level ${i}:`, container.className, container.id);
+                
+                // Look for any attribute that might contain a URL
+                const attributes = container.attributes;
+                for (let attr of attributes) {
+                  if (attr.value && attr.value.includes('http') && !attr.value.includes('google.com')) {
+                    const urlMatch = attr.value.match(/https?:\/\/[^\s;]+/);
                     if (urlMatch) {
-                      console.log("Found URL in container:", urlMatch[0]);
+                      console.log("🎯 FOUND URL in attribute", attr.name, ":", urlMatch[0]);
                       return urlMatch[0];
                     }
                   }
                 }
-                break;
-              }
-              if (container && container.parentElement) {
-                container = container.parentElement;
-              } else {
-                break;
-              }
-            }
-            
-            // Method 7: Look for any element with jsdata that might contain URL info
-            const jsdataElements = document.querySelectorAll('[jsdata]');
-            for (let el of jsdataElements) {
-              const jsdata = el.getAttribute('jsdata');
-              if (jsdata && jsdata.includes('http')) {
-                const urlMatch = jsdata.match(/https?:\/\/[^\s;]+/);
-                if (urlMatch && !urlMatch[0].includes('google.com')) {
-                  console.log("Found URL in jsdata:", urlMatch[0]);
-                  return urlMatch[0];
+                
+                if (container.parentElement) {
+                  container = container.parentElement;
+                } else {
+                  break;
                 }
               }
             }
+            
+            console.log("❌ Could not find original source URL");
+          } else {
+            console.log("Not on Google Images, using current page URL");
           }
           
-          console.log("Could not find original source, using current page URL");
           return pageUrl; // Fallback to current page URL
         }
         
@@ -355,6 +391,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
             break;
           }
         }
+        
+        console.log("Final original source URL:", originalSourceUrl);
         
         // Collect detailed image information
         let imageInfo = {
