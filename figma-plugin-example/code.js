@@ -38,6 +38,9 @@ function handleImageImport(imageData) {
       throw new Error('Image URL is missing.');
     }
     
+    // Show loading message
+    figma.ui.postMessage({ type: 'info', message: 'Loading image from URL...' });
+    
     // Create image from URL
     figma.createImageFromUrl(imageData.imageUrl).then(function(image) {
       console.log('Image created successfully:', image);
@@ -46,10 +49,15 @@ function handleImageImport(imageData) {
       var frame = figma.createFrame();
       frame.name = 'Image Reference - ' + (imageData.altText || 'Image');
       
-      // Set image size (provide default values)
+      // Set image size based on imageInfo or use image dimensions
       var imageInfo = imageData.imageInfo || {};
-      var width = imageInfo.naturalWidth || imageInfo.displayWidth || 300;
-      var height = imageInfo.naturalHeight || imageInfo.displayHeight || 200;
+      var width = imageInfo.naturalWidth || imageInfo.displayWidth || image.width || 300;
+      var height = imageInfo.naturalHeight || imageInfo.displayHeight || image.height || 200;
+      
+      // Ensure minimum size
+      width = Math.max(width, 100);
+      height = Math.max(height, 100);
+      
       frame.resize(width, height);
       
       // Set image fill
@@ -81,7 +89,7 @@ function handleImageImport(imageData) {
       referenceFrame.paddingRight = 16;
       referenceFrame.paddingTop = 16;
       referenceFrame.paddingBottom = 16;
-      referenceFrame.resize(280, 200);
+      referenceFrame.resize(300, 200);
       referenceFrame.fills = [{ type: 'SOLID', color: { r: 0.95, g: 0.95, b: 0.95 } }];
       referenceFrame.cornerRadius = 8;
       
@@ -118,6 +126,15 @@ function handleImageImport(imageData) {
         referenceFrame.appendChild(timestamp);
       }
       
+      // Add source indicator
+      if (imageData.metadata && imageData.metadata.originalSource) {
+        var sourceIndicator = figma.createText();
+        sourceIndicator.characters = '✅ ' + imageData.metadata.originalSource;
+        sourceIndicator.fontSize = 10;
+        sourceIndicator.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.6, b: 0.2 } }];
+        referenceFrame.appendChild(sourceIndicator);
+      }
+      
       // Add reference frame to container
       container.appendChild(referenceFrame);
       
@@ -126,6 +143,7 @@ function handleImageImport(imageData) {
         title.fontName = { family: "Inter", style: "Regular" };
         details.fontName = { family: "Inter", style: "Regular" };
         timestamp.fontName = { family: "Inter", style: "Regular" };
+        sourceIndicator.fontName = { family: "Inter", style: "Regular" };
       }).catch(function(fontError) {
         console.log('Font loading failed, using default font:', fontError);
       });
@@ -168,6 +186,10 @@ function handleImportError(error) {
     errorMessage = 'Image not found. Please check the URL.';
   } else if (error.message.indexOf('network') !== -1) {
     errorMessage = 'Network error occurred. Please check your internet connection.';
+  } else if (error.message.indexOf('403') !== -1) {
+    errorMessage = 'Access denied. The image may be protected.';
+  } else if (error.message.indexOf('500') !== -1) {
+    errorMessage = 'Server error. Please try again later.';
   } else {
     errorMessage = 'Image import failed: ' + error.message;
   }

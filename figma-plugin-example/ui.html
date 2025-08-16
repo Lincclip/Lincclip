@@ -228,6 +228,26 @@
         .keyboard-shortcuts strong {
             color: #333;
         }
+        
+        .feature-highlight {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .feature-highlight h4 {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .feature-highlight p {
+            font-size: 10px;
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body>
@@ -235,6 +255,11 @@
         <div class="header">
             <h1>🖼️ Image Reference Importer</h1>
             <p>Import image data copied from Chrome extension to Figma</p>
+        </div>
+
+        <div class="feature-highlight">
+            <h4>✨ New Feature: Google Images Support</h4>
+            <p>Now automatically extracts original source URLs from Google Images!</p>
         </div>
 
         <div class="method-tabs">
@@ -281,6 +306,7 @@
                 <li><strong>Manual Paste:</strong> Paste JSON copied from Chrome into text area</li>
                 <li><strong>Auto Sync:</strong> Direct communication with Chrome extension (experimental)</li>
                 <li>Last imported data can be reused</li>
+                <li><strong>Google Images:</strong> Automatically extracts original source URLs</li>
             </ol>
         </div>
 
