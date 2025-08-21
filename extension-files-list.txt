@@ -1,0 +1,23 @@
+Chrome Extension 배포에 필요한 파일들:
+
+필수 파일:
+- manifest.json (확장 프로그램 설정)
+- background.js (백그라운드 스크립트)
+- content_script.js (콘텐츠 스크립트)
+- popup.html (팝업 UI)
+- popup.js (팝업 스크립트)
+- icon16.png (16x16 아이콘)
+- icon48.png (48x48 아이콘)
+- icon128.png (128x128 아이콘)
+
+선택 파일:
+- README.md (설명서)
+- LICENSE (라이선스)
+
+제외할 파일들:
+- server.js (로컬 서버용)
+- package.json (Node.js용)
+- figma-plugin-example/ (Figma 플러그인 폴더)
+- debug.html, test.html (테스트용)
+- generate_icons.html (아이콘 생성용)
+- old_icons/ (구 아이콘들)

@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Image Reference Copy",
+    "name": "Lincclip",
     "version": "1.0",
     "description": "Copy images with their reference links for Figma integration.",
     "permissions": ["contextMenus", "clipboardWrite", "activeTab", "scripting", "notifications", "tabs", "management"],

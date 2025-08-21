@@ -286,6 +286,7 @@
                 <button class="btn btn-primary" id="importBtn" onclick="handleImport()">📥 Import Image</button>
                 <button class="btn btn-secondary" id="clearBtn" onclick="handleClear()">🗑️ Clear</button>
                 <button class="btn btn-warning" id="reimportBtn" onclick="handleReimport()">🔄 Reimport Last</button>
+                <button class="btn btn-success" id="testBtn" onclick="handleTest()">🧪 Test Plugin</button>
             </div>
         </div>
 
@@ -555,6 +556,20 @@
                 showStatus('Fetching data from Chrome extension...', 'info');
             } else {
                 showStatus('Failed to send message to Figma. Please try again.', 'error');
+            }
+        }
+        
+        // Handle test button click
+        function handleTest() {
+            console.log('Test button clicked');
+            var messageSent = sendMessageToFigma({
+                type: 'test'
+            });
+            
+            if (messageSent) {
+                showStatus('Testing plugin communication...', 'info');
+            } else {
+                showStatus('Failed to send test message to Figma. Please try again.', 'error');
             }
         }
         

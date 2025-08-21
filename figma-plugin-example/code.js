@@ -1,47 +1,80 @@
 // Figma plugin main code
-figma.showUI(__html__, { width: 400, height: 500 });
+console.log('=== FIGMA PLUGIN STARTING ===');
+
+try {
+  figma.showUI(__html__, { width: 400, height: 500 });
+  console.log('✅ UI shown successfully');
+} catch (error) {
+  console.error('❌ Failed to show UI:', error);
+}
 
 // State for communication with Chrome extension
 var lastImageData = null;
 
 // Receive messages from UI
 figma.ui.onmessage = function(msg) {
-  console.log('=== FIGMA PLUGIN: Received message from UI ===');
-  console.log('Message:', msg);
-  console.log('Message type:', msg.type);
-  
-  if (msg.type === 'import-image-reference') {
-    console.log('Handling import-image-reference message');
-    handleImageImport(msg.data);
-  }
-  
-  // Fetch data directly from Chrome extension (network communication)
-  if (msg.type === 'fetch-from-extension') {
-    console.log('Handling fetch-from-extension message');
-    handleFetchFromExtension();
-  }
-  
-  // Reuse last imported data
-  if (msg.type === 'reimport-last') {
-    console.log('Handling reimport-last message');
-    handleReimportLast();
-  }
-  
-  if (msg.type === 'close') {
-    console.log('Handling close message');
-    figma.closePlugin();
-  }
-  
-  if (msg.type === 'init') {
-    console.log('Handling init message:', msg.message);
-    figma.ui.postMessage({ type: 'success', message: 'Plugin initialized successfully!' });
-  }
-  
-  if (msg.type === 'add-domain') {
-    console.log('Handling add-domain message:', msg.domain);
+  try {
+    console.log('=== FIGMA PLUGIN: Received message from UI ===');
+    console.log('Message:', msg);
+    console.log('Message type:', msg.type);
+    
+    if (!msg || !msg.type) {
+      console.error('❌ Invalid message received:', msg);
+      return;
+    }
+    
+    if (msg.type === 'import-image-reference') {
+      console.log('Handling import-image-reference message');
+      handleImageImport(msg.data);
+    }
+    
+    // Fetch data directly from Chrome extension (network communication)
+    else if (msg.type === 'fetch-from-extension') {
+      console.log('Handling fetch-from-extension message');
+      handleFetchFromExtension();
+    }
+    
+    // Reuse last imported data
+    else if (msg.type === 'reimport-last') {
+      console.log('Handling reimport-last message');
+      handleReimportLast();
+    }
+    
+    else if (msg.type === 'close') {
+      console.log('Handling close message');
+      figma.closePlugin();
+    }
+    
+    else if (msg.type === 'init') {
+      console.log('Handling init message:', msg.message);
+      figma.ui.postMessage({ type: 'success', message: 'Plugin initialized successfully!' });
+    }
+    
+    else if (msg.type === 'add-domain') {
+      console.log('Handling add-domain message:', msg.domain);
+      figma.ui.postMessage({ 
+        type: 'info', 
+        message: 'To add domain "' + msg.domain + '" to allowed list, please update manifest.json and reload the plugin.' 
+      });
+    }
+    
+    else if (msg.type === 'test') {
+      console.log('Handling test message');
+      figma.ui.postMessage({ 
+        type: 'success', 
+        message: 'Test successful! Plugin is working correctly.' 
+      });
+    }
+    
+    else {
+      console.warn('⚠️ Unknown message type:', msg.type);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in message handler:', error);
     figma.ui.postMessage({ 
-      type: 'info', 
-      message: 'To add domain "' + msg.domain + '" to allowed list, please update manifest.json and reload the plugin.' 
+      type: 'error', 
+      message: 'Plugin error: ' + error.message 
     });
   }
 };
@@ -76,23 +109,9 @@ function handleImageImport(imageData) {
 function createImageWithFallback(imageData) {
   console.log('=== TRYING IMAGE CREATION METHODS ===');
   
-  // Method 1: Try figma.createImageFromUrl (newer API)
-  if (typeof figma.createImageFromUrl === 'function') {
-    console.log('✅ Trying figma.createImageFromUrl...');
-    figma.createImageFromUrl(imageData.imageUrl).then(function(image) {
-      console.log('✅ Image created successfully with createImageFromUrl:', image);
-      processImage(image, imageData);
-    }).catch(function(error) {
-      console.error('❌ createImageFromUrl failed:', error);
-      // Try alternative method
-      createImageWithFetch(imageData);
-    });
-  }
-  // Method 2: Try using fetch to get image data
-  else {
-    console.log('❌ Direct image creation APIs not available, trying fetch method...');
-    createImageWithFetch(imageData);
-  }
+  // Always use proxy method to avoid CORS issues
+  console.log('🔄 Using proxy method to avoid CORS issues...');
+  createImageWithFetch(imageData);
 }
 
 // Create image using fetch method
@@ -106,11 +125,12 @@ function createImageWithFetch(imageData) {
     return;
   }
   
-  // Try to fetch the image with proxy fallback
+  // Always use Koyeb proxy server to avoid CORS issues
   var imageUrl = imageData.imageUrl;
+  console.log('🔄 Using Koyeb proxy server for all images...');
+  var koyebProxyUrl = 'https://lincclip-proxy-server.koyeb.app/proxy/image?url=' + encodeURIComponent(imageUrl);
   
-  // First try direct fetch
-  fetch(imageUrl)
+  fetch(koyebProxyUrl)
     .then(function(response) {
       if (!response.ok) {
         throw new Error('Failed to fetch image: ' + response.status);
@@ -118,7 +138,7 @@ function createImageWithFetch(imageData) {
       return response.arrayBuffer();
     })
     .then(function(arrayBuffer) {
-      console.log('✅ Image fetched successfully, size:', arrayBuffer.byteLength);
+      console.log('✅ Image fetched successfully via proxy, size:', arrayBuffer.byteLength);
       
       // Try to create image from array buffer
       if (typeof figma.createImageFromBytes === 'function') {
@@ -130,38 +150,35 @@ function createImageWithFetch(imageData) {
       }
     })
     .then(function(image) {
-      console.log('✅ Image created from bytes:', image);
+      console.log('✅ Image created from proxy bytes:', image);
       processImage(image, imageData);
     })
     .catch(function(error) {
-      console.error('❌ Direct fetch failed:', error);
+      console.error('❌ Koyeb proxy fetch failed:', error);
       
-      // Check if it's a CSP error and try proxy
-      if (error.message.includes('CSP') || error.message.includes('Content Security Policy') || 
-          error.message.includes('Failed to fetch') || error.message.includes('not in the list of allowed domains')) {
-        console.log('⚠️ CSP violation detected, trying proxy...');
-        
-        // Try proxy services
-        var proxyUrls = [
-          'https://cors-anywhere.herokuapp.com/',
-          'https://api.allorigins.win/raw?url=',
-          'https://thingproxy.freeboard.io/fetch/',
-          'https://corsproxy.io/?'
-        ];
-        
-        tryProxyServices(imageData, proxyUrls, 0);
+      // Check if it's a CORS error and provide specific guidance
+      if (error.message.includes('CORS') || error.message.includes('Access-Control-Allow-Origin') || 
+          error.message.includes('gravatar') || error.message.includes('Failed to fetch')) {
+        console.log('⚠️ CORS error detected, this is likely from Figma UI or review mode restrictions');
+        figma.ui.postMessage({ 
+          type: 'info', 
+          message: 'CORS error detected (likely from Figma UI). Creating reference placeholder instead. This is normal in review mode.' 
+        });
       } else {
         figma.ui.postMessage({ 
           type: 'warning', 
-          message: 'Image fetch failed. Creating reference placeholder instead.' 
+          message: 'Proxy server failed. Creating reference placeholder instead. Error: ' + error.message 
         });
-        createImageAlternative(imageData);
       }
+      
+      // Always continue with alternative method
+      createImageAlternative(imageData);
     });
 }
 
-// Try proxy services for image fetching
+// Try proxy services for image fetching (currently only Koyeb proxy)
 function tryProxyServices(imageData, proxyUrls, index) {
+  // This function is kept for future use but currently only uses Koyeb proxy
   if (index >= proxyUrls.length) {
     console.log('❌ All proxy services failed, using alternative method');
     figma.ui.postMessage({ 
@@ -530,4 +547,23 @@ function handleReimportLast() {
 
 // Initial message when plugin starts
 console.log('=== FIGMA PLUGIN STARTED ===');
-figma.ui.postMessage({ type: 'init', message: 'Image Reference Importer is ready.' });
+
+// Send initialization message to UI
+setTimeout(function() {
+  try {
+    var message = 'Image Reference Importer is ready. Plugin loaded successfully!';
+    
+    // Check if we're in review mode (limited environment)
+    if (figma.editorType === 'figma' && !figma.isEditing) {
+      message += ' (Review mode - some features may be limited)';
+    }
+    
+    figma.ui.postMessage({ 
+      type: 'init', 
+      message: message
+    });
+    console.log('✅ Initialization message sent');
+  } catch (error) {
+    console.error('❌ Failed to send initialization message:', error);
+  }
+}, 1000);
